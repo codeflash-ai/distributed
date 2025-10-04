@@ -19,6 +19,8 @@ import subprocess
 import sys
 from typing import Any, Callable
 
+keywords = {"refnames": "$Format:%d$", "full": "$Format:%H$", "date": "$Format:%ci$"}
+
 
 def get_keywords() -> dict[str, str]:
     """Get the keywords needed to look up the version information."""
@@ -26,11 +28,7 @@ def get_keywords() -> dict[str, str]:
     # setup.py/versioneer.py will grep for the variable names, so they must
     # each be defined on a line of their own. _version.py will just call
     # get_keywords().
-    git_refnames = "$Format:%d$"
-    git_full = "$Format:%H$"
-    git_date = "$Format:%ci$"
-    keywords = {"refnames": git_refnames, "full": git_full, "date": git_date}
-    return keywords
+    return keywords.copy()
 
 
 class VersioneerConfig:
