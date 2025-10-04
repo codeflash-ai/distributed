@@ -463,16 +463,25 @@ class WSSConnector(WSConnector):
     comm_class = WSS
 
     def _get_connect_args(self, **connection_args):
-        wss_args = {
-            "ssl_options": connection_args.get("ssl_context"),
-            **connection_args.get("extra_conn_args", {}),
-        }
+        ssl_options = connection_args.get("ssl_context")
+        extra_conn_args = connection_args.get("extra_conn_args")
+        if extra_conn_args is None:
+            wss_args = {"ssl_options": ssl_options}
+        else:
+            # We avoid using {**dict1, **dict2} for large dicts to save memory.
+            wss_args = dict(extra_conn_args)
+            wss_args["ssl_options"] = ssl_options
 
-        if connection_args.get("server_hostname"):
-            wss_args["headers"] = {
-                **wss_args.get("headers", {}),
-                **{"Host": connection_args["server_hostname"]},
-            }
+        server_hostname = connection_args.get("server_hostname")
+        if server_hostname:
+            headers = wss_args.get("headers")
+            if headers is None:
+                headers = {}
+            else:
+                # Fast copy for dict to avoid unnecessary unpacking
+                headers = dict(headers)
+            headers["Host"] = server_hostname
+            wss_args["headers"] = headers
 
         return wss_args
 
