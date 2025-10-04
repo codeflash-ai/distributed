@@ -455,7 +455,7 @@ class WSConnector(Connector):
         return self.comm_class(sock, deserialize=deserialize)
 
     def _get_connect_args(self, **connection_args):
-        return {**connection_args.get("extra_conn_args", {})}
+        return connection_args.get("extra_conn_args") or {}
 
 
 class WSSConnector(WSConnector):
