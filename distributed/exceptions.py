@@ -32,14 +32,13 @@ class WorkerStartTimeoutError(TimeoutError):
     def __init__(
         self, available_workers: int, expected_workers: int, timeout: float
     ) -> None:
+        # Directly call super().__init__ with preformatted string to optimize __str__ and argument passing
+        # This avoids constructing tuple and string formatting each time __str__ is called.
         self.available_workers = available_workers
         self.expected_workers = expected_workers
         self.timeout = timeout
-        super().__init__(available_workers, expected_workers, timeout)
+        self._str_msg = f"Only {available_workers}/{expected_workers} workers arrived after {timeout}"
+        super().__init__(self._str_msg)
 
     def __str__(self) -> str:
-        return "Only %d/%d workers arrived after %s" % (
-            self.available_workers,
-            self.expected_workers,
-            self.timeout,
-        )
+        return self._str_msg
