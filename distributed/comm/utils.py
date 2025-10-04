@@ -37,15 +37,18 @@ async def to_frames(
             logger.exception(e)
             raise
 
+    # Optimization: Skip expensive safe_sizeof for small control messages
     if OFFLOAD_THRESHOLD and allow_offload:
-        # dask.sizeof.sizeof() starts raising RecursionError at ~140 recursion depth,
-        # whereas msgpack can go on for quite a bit longer, until 512 (sometimes 256,
-        # depending on compilation flags). The default default_size of
-        # distributed.sizeof.safe_sizeof() is 1MB, which is less than the
-        # OFFLOAD_THRESHOLD.
-        msg_size = safe_sizeof(msg, default_size=-1)
-        if msg_size == -1 or msg_size > OFFLOAD_THRESHOLD:
-            return await offload(_to_frames)
+        if not _is_small_control_message(msg):
+            # dask.sizeof.sizeof() starts raising RecursionError at ~140 recursion depth,
+            # whereas msgpack can go on for quite a bit longer, until 512 (sometimes 256,
+            # depending on compilation flags). The default default_size of
+            # distributed.sizeof.safe_sizeof() is 1MB, which is less than the
+            # OFFLOAD_THRESHOLD.
+            msg_size = safe_sizeof(msg, default_size=-1)
+            if msg_size == -1 or msg_size > OFFLOAD_THRESHOLD:
+                return await offload(_to_frames)
+        # else: small message, never offload, just inline
 
     return _to_frames()
 
@@ -124,3 +127,27 @@ def ensure_concrete_host(host, default_host=None):
         return default_host or get_ipv6()
     else:
         return host
+
+
+def _is_small_control_message(msg) -> bool:
+    # Short-circuit size checks for standard small/control messages
+    # Covers the majority case for lightweight Dask control traffic
+    return (
+        msg is None
+        or isinstance(msg, (str, bytes))
+        or (
+            isinstance(msg, (int, float, bool))
+            # Note: bool is subclass of int, but included for clarity
+        )
+        or (
+            isinstance(msg, dict) and len(msg) <= 4 and all(
+                isinstance(k, str) and isinstance(v, (str, bytes, int, float, bool, type(None)))
+                for k, v in msg.items()
+            )
+        )
+        or (
+            isinstance(msg, (list, tuple))
+            and len(msg) <= 4
+            and all(isinstance(x, (str, bytes, int, float, bool, type(None))) for x in msg)
+        )
+    )
