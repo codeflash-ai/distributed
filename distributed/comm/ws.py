@@ -236,7 +236,10 @@ class WS(Comm):
         except WebSocketClosedError as e:
             raise CommClosedError(e)
 
-        frames = [(await self.sock.read_message()) for _ in range(n_frames)]
+        frames = []
+        for _ in range(n_frames):
+            frame = await self.sock.read_message()
+            frames.append(frame)
 
         msg = await from_frames(
             frames,

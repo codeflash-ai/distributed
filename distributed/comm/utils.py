@@ -54,7 +54,7 @@ async def from_frames(frames, deserialize=True, deserializers=None, allow_offloa
     """
     Unserialize a list of Distributed protocol frames.
     """
-    size = False
+    size = 0
 
     def _from_frames():
         try:
@@ -71,7 +71,10 @@ async def from_frames(frames, deserialize=True, deserializers=None, allow_offloa
             raise
 
     if allow_offload and deserialize and OFFLOAD_THRESHOLD:
-        size = sum(map(nbytes, frames))
+        # In-place loop for sum for speed improvement vs sum(map(...))
+        size = 0
+        for frame in frames:
+            size += nbytes(frame)
     if allow_offload and deserialize and OFFLOAD_THRESHOLD and size > OFFLOAD_THRESHOLD:
         res = await offload(_from_frames)
     else:
