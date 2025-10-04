@@ -211,12 +211,13 @@ class WS(Comm):
         self._local_addr = f"{self.prefix}{self.sock.parsed.netloc}"
         self._peer_addr = f"{self.prefix}{self.sock.parsed.netloc}"
         self.allow_offload = allow_offload
+        self._repr = repr(self)
         self._finalizer = weakref.finalize(self, self._get_finalizer())
         self._extra: dict = {}
         self._read_extra()
 
     def _get_finalizer(self):
-        r = repr(self)
+        r = self._repr
 
         def finalize(sock=self.sock, r=r):
             if not sock.close_code:
